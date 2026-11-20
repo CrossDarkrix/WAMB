@@ -1,0 +1,6 @@
+wamb.exe
+*.zip
+config.json
+reports/
+serve-state.json
+*.log
