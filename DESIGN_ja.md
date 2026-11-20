@@ -1,7 +1,7 @@
 # WAMB (Win Anti Malware Blocker) 設計メモ (v0.6)
 
-作成: 2026-11-21 / 状態: 主要決定は確定 (2026-11-21 たろうさん決定)
-名称: **WAMB (Win Anti Malware Blocker)** — たろうさん命名。当初案の WAMD (…Defender) から変更し、Microsoft 製品と紛らわしい "Defender" を外した。
+作成: 2026-11-21 / 状態: 主要決定は確定 (2026-11-21)
+名称: **WAMB (Win Anti Malware Blocker)** — 命名。当初案の WAMD (…Defender) から変更し、Microsoft 製品と紛らわしい "Defender" を外した。
 実装言語: **Go** (単一 exe、Windows サービス化しやすい)
 
 ## 目的
@@ -25,7 +25,7 @@
 ## 動作形態 (確定: 二重スケジューリング)
 
 - **主: Windows サービスとして常駐**し、自己スケジューラ (内部 ticker) で freshclam とスキャンを回す。Go 側は `golang.org/x/sys/windows/svc` (または kardianos/service) で実装。
-- **保険: タスクスケジューラにも同じジョブを登録**し、サービスが落ちている/止められている場合でも単発 CLI (`wamd scan` / `wamd update`) が定期実行されるようにする (たろうさんの「万が一に備えて保険」案)。
+- **保険: タスクスケジューラにも同じジョブを登録**し、サービスが落ちている/止められている場合でも単発 CLI (`wamd scan` / `wamd update`) が定期実行されるようにする (「万が一に備えて保険」という方針)。
 - 二重化の副作用対策: スキャンと更新は **名前付きミューテックス + ロックファイル**で同時実行を禁止する。サービス側とタスク側がぶつかったら後発は「実行中」と記録して何もしない。
 - サービスは SYSTEM で動く前提。そのため設定ファイルと exe は管理者のみ書き換え可能な場所 (Program Files / ProgramData 配下) に置く。
 
@@ -35,7 +35,7 @@
 - **検出のみ**: `--remove` / `--move` は使わない。検出は一覧化して報告まで。隔離への移行は誤検知の癖を見てから別途判断。
 - PUA 検出 (`--detect-pua`) は既定 OFF (開発ツール類の誤検知を避ける)。
 - 除外 (初期): msys64、ビルド出力フォルダ、プロジェクトの作業ツリー、Go のキャッシュ等。
-- **clamd は使わない (確定)**: たろうさんに「以前使った時めちゃくちゃ重い」印象があり、DB 常駐のメモリ消費も見合わない。clamscan 都度実行のみ。起動時に DB を読む分は夜間スケジュール前提で許容する。
+- **clamd は使わない (確定)**: 以前使った際に「めちゃくちゃ重い」印象があったため、DB 常駐のメモリ消費も見合わない。clamscan 都度実行のみ。起動時に DB を読む分は夜間スケジュール前提で許容する。
 
 ## 更新方針
 
@@ -59,7 +59,7 @@
 2. Phase 2: サービス化 + スケジューラ + freshclam 自動化。4200M で数日運用し誤検知と負荷を見る。
 3. Phase 3: 通知追加、問題なければメイン機へ展開 (メイン機は 24H2 固定運用に影響しないことを確認してから)。
 
-## Phase 1 追加要件 (2026-11-21 たろうさん指定)
+## Phase 1 追加要件 (2026-11-21 追加指定)
 
 - CLI 引数でスキャン対象フォルダを指定できる
 - 検知度合い (感度レベル) を変更できる → clamscan のオプション群にマッピング (低/標準/高)
@@ -92,3 +92,10 @@
 - `wamb task install --user`: WAMB Update / WAMB Scan の登録・schtasks での確認・uninstall まで通過 (SYSTEM 登録は管理者実行時のみ、メイン機の setup スクリプト側で実施)。
 - `wamb serve` (テスト設定、update 03:10 / scan 03:13): 起動直後に watch が4フォルダ (Downloads/Desktop/Edge/Brave) を監視開始。Downloads へのキャリア投下を watch が検出 (03:10:07)。03:10 に signature update done、03:13 に scheduled scan (6ファイル・1検出) が発火し、serve-state.json に両ジョブの日付が記録された。再起動時の二重実行防止もこの状態ファイルで担保。
 - メイン機資材 (wamb.exe / setup-wamb-mainpc.ps1 / wamb-mainpc-config.json) を WebDAV の C:\Muse へ配置済み (全て PUT 201)。残るは本人の管理者実行のみ。
+
+## 決定事項 (2026-11-21)
+
+1. 動作形態: **サービス (自己スケジューラ) + タスクスケジューラの二重化** (保険として)
+2. clamd: **不採用** (重い印象 + メモリ消費)
+3. 通知: **Discord Webhook + Muse 可読 JSON レポート (C:\Muse\wamd へミラー)**
+4. 名称: **WAMB (Win Anti Malware Blocker)** (Defender 表記を避けて改名)
