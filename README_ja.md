@@ -1,3 +1,7 @@
+<div align="center">
+	<img width="150px" height="150px" alt="WAMB" src="https://raw.githubusercontent.com/CrossDarkrix/WAMB/master/WAMB.png">
+</div>
+
 [English](README.md) | 日本語
 
 # WAMB — Win Anti Malware Blocker
